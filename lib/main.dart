@@ -86,6 +86,21 @@ class _BoardScreenState extends State<BoardScreen> {
     setState(() {});
   }
 
+  void bearOff() {
+    _fromValue = -1;
+    _toValue = -1;
+
+    whitePieces = List.generate(
+      15,
+      (e) => Piece(id: e, position: 26, isWhite: true),
+    );
+    blackPieces = List.generate(
+      15,
+      (e) => Piece(id: e, position: 27, isWhite: false),
+    );
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -276,6 +291,7 @@ class _BoardScreenState extends State<BoardScreen> {
                                 children: [
                                   Wrap(
                                     spacing: 4,
+                                    runSpacing: 4,
                                     children: [
                                       ElevatedButton(
                                         onPressed: onDevPressed,
@@ -286,7 +302,11 @@ class _BoardScreenState extends State<BoardScreen> {
                                         onPressed: resetBoard,
                                         child: Text('reset'),
                                       ),
-                                      Text('$_fromValue -> $_toValue'),
+                                      ElevatedButton(
+                                        onPressed: bearOff,
+                                        child: Text('bearOff'),
+                                      ),
+                                      Text('From:$_fromValue -> To:$_toValue'),
                                     ],
                                   ),
                                 ],
