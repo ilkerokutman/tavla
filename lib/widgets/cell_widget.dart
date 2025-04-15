@@ -22,7 +22,8 @@ class CellWidget extends StatelessWidget {
         quarterTurns: !isUp ? 0 : 2,
         child: CustomPaint(
           size: Size(cellWidth, cellWidth * 3),
-          painter: TrianglePainter(),
+          painter:
+              cellIndex % 2 == 0 ? LightTrianglePainter() : TrianglePainter(),
         ),
       ),
     );
