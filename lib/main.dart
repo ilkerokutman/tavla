@@ -1,4 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:tavla/models/piece.dart';
+import 'package:tavla/piece_widget.dart';
+import 'package:tavla/triangle_painter.dart';
 
 void main() {
   runApp(const MainApp());
@@ -38,143 +43,454 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
-class BoardScreen extends StatelessWidget {
+class BoardScreen extends StatefulWidget {
   const BoardScreen({super.key});
 
   @override
+  State<BoardScreen> createState() => _BoardScreenState();
+}
+
+class _BoardScreenState extends State<BoardScreen> {
+  late List<Piece> whitePieces;
+  late List<Piece> blackPieces;
+  int _fromValue = -1;
+  int _toValue = -1;
+  int _hovering = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    resetBoard();
+  }
+
+  void resetBoard() {
+    _fromValue = -1;
+    _toValue = -1;
+
+    whitePieces = List.generate(
+      15,
+      (e) => Piece(
+        id: e,
+        position: calculateInitialPosition(e, true),
+        isWhite: true,
+      ),
+    );
+    blackPieces = List.generate(
+      15,
+      (e) => Piece(
+        id: e,
+        position: calculateInitialPosition(e, false),
+        isWhite: false,
+      ),
+    );
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    int zoneCountInOneRegion = 6;
-    return Row(
-      spacing: 20,
+    return Stack(
       children: [
-        for (int i = 0; i < zoneCountInOneRegion; i++)
-          Expanded(
+        Container(
+          constraints: BoxConstraints.expand(),
+          decoration: const BoxDecoration(color: Colors.brown),
+        ),
+        Center(
+          child: AspectRatio(
+            aspectRatio: 5 / 3,
             child: Container(
-              width: 20,
-              height: double.infinity,
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    color: Colors.red,
-                    height: 150,
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: 10,
-                          left: 6,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 36,
-                          left: 6,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 62,
-                          left: 6,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 88,
-                          left: 6,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 114,
-                          left: 6,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
+              padding: const EdgeInsets.all(20),
+              color: Colors.brown.shade300,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  double width = constraints.maxWidth;
+                  // double height = constraints.maxHeight;
+                  double cellWidth = ((width / 16).ceil() - 1).toDouble();
+                  double barWidth = cellWidth * 1;
+                  double bearOffTrayWidth = cellWidth * 3;
 
-                        Positioned(
-                          top: 15,
-                          left: 12,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                  return Row(
+                    children: [
+                      // MARK: LEFT SIDE
+                      for (int i = 0; i < 6; i++)
+                        Container(
+                          width: cellWidth.toDouble(),
+                          height: double.infinity,
+                          color: Colors.brown.shade200,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  if (_fromValue > 0) {
+                                    setState(() {
+                                      _toValue = 11 - i;
+                                    });
+                                    moveItem();
+                                  } else {
+                                    setState(() {
+                                      _fromValue = 11 - i;
+                                      _toValue = -1;
+                                    });
+                                  }
+                                },
+                                child: cellTriangle(
+                                  cellWidth,
+                                  true,
+                                  index: 11 - i,
+                                ),
+                              ),
+                              ...cellContent(11 - i, cellWidth, true),
+                              Align(
+                                alignment: Alignment.topCenter,
+                                child: Text('${11 - i}'),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  if (_fromValue > 0) {
+                                    setState(() {
+                                      _toValue = 12 + i;
+                                    });
+                                    moveItem();
+                                  } else {
+                                    setState(() {
+                                      _fromValue = 12 + i;
+                                      _toValue = -1;
+                                    });
+                                  }
+                                },
+                                child: cellTriangle(
+                                  cellWidth,
+                                  false,
+                                  index: 12 + i,
+                                ),
+                              ),
+                              ...cellContent(12 + i, cellWidth, false),
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Text('${12 + i}'),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: double.infinity,
-                    color: Colors.red,
-                    height: 150,
-                  ),
-                ],
+                      // MARK: BAR
+                      Container(
+                        width: barWidth.toDouble(),
+                        height: double.infinity,
+                        color: Colors.brown.shade300,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ...cellContent(24, barWidth, true),
+                            Align(
+                              alignment: Alignment.topCenter,
+                              child: Text('24'),
+                            ),
+
+                            ...cellContent(25, barWidth, false),
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Text('25'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // MARK: RIGHT SIDE
+                      for (int i = 0; i < 6; i++)
+                        Container(
+                          width: cellWidth.toDouble(),
+                          height: double.infinity,
+                          color: Colors.brown.shade200,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  if (_fromValue > 0) {
+                                    setState(() {
+                                      _toValue = 5 - i;
+                                    });
+                                    moveItem();
+                                  } else {
+                                    setState(() {
+                                      _fromValue = 5 - i;
+                                      _toValue = -1;
+                                    });
+                                  }
+                                },
+                                child: cellTriangle(
+                                  cellWidth,
+                                  true,
+                                  index: 5 - i,
+                                ),
+                              ),
+                              ...cellContent(5 - i, cellWidth, true),
+                              Align(
+                                alignment: Alignment.topCenter,
+                                child: Text('${5 - i}'),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  if (_fromValue > 0) {
+                                    setState(() {
+                                      _toValue = 18 + i;
+                                    });
+                                    moveItem();
+                                  } else {
+                                    setState(() {
+                                      _fromValue = 18 + i;
+                                      _toValue = -1;
+                                    });
+                                  }
+                                },
+                                child: cellTriangle(
+                                  cellWidth,
+                                  false,
+                                  index: 18 + i,
+                                ),
+                              ),
+                              ...cellContent(18 + i, cellWidth, false),
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Text('${18 + i}'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      // MARK: BEAR OFF
+                      Container(
+                        width: bearOffTrayWidth.toDouble(),
+                        height: double.infinity,
+                        color: Colors.brown.shade300,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ...cellContent(26, barWidth, true),
+                            Align(
+                              alignment: Alignment.topCenter,
+                              child: Text('26'),
+                            ),
+
+                            Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Wrap(
+                                    spacing: 4,
+                                    children: [
+                                      ElevatedButton(
+                                        onPressed: onDevPressed,
+                                        child: Text('random'),
+                                      ),
+
+                                      ElevatedButton(
+                                        onPressed: resetBoard,
+                                        child: Text('reset'),
+                                      ),
+                                      Text('$_fromValue -> $_toValue'),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            ...cellContent(27, barWidth, false),
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Text('27'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
-
-        Container(color: Colors.yellow, width: 60, height: double.infinity),
-        for (int i = 0; i < zoneCountInOneRegion; i++)
-          Expanded(
-            child: Container(
-              width: 20,
-              height: double.infinity,
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    color: Colors.red,
-                    height: 150,
-                  ),
-                  Container(
-                    width: double.infinity,
-                    color: Colors.red,
-                    height: 150,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        Container(color: Colors.yellow, width: 60, height: double.infinity),
-        Container(width: 120, height: double.infinity),
+        ),
       ],
     );
+  }
+
+  // MARK: Triangle
+  Widget cellTriangle(double cellWidth, bool isTop, {required int index}) =>
+      Align(
+        alignment: isTop ? Alignment.topCenter : Alignment.bottomCenter,
+        child: MouseRegion(
+          onEnter: (event) {
+            setState(() {
+              _hovering = index;
+            });
+          },
+          onExit: (event) {
+            setState(() {
+              _hovering = -1;
+            });
+          },
+          child: RotatedBox(
+            quarterTurns: !isTop ? 0 : 2,
+            child: CustomPaint(
+              size: Size(cellWidth.toDouble(), cellWidth * 4),
+              painter:
+                  index == _fromValue
+                      ? HighlightedTrianglePainter()
+                      : _hovering == index
+                      ? HoveredTrianglePainter()
+                      : TrianglePainter(),
+            ),
+          ),
+        ),
+      );
+
+  // MARK: Content
+  List<Widget> cellContent(int cellIndex, double cellWidth, bool isTop) {
+    final List<Piece> whitesOnCell =
+        whitePieces.where((piece) => piece.position == cellIndex).toList();
+    final List<Piece> blacksOnCell =
+        blackPieces.where((piece) => piece.position == cellIndex).toList();
+
+    return [
+      for (int i = 0; i < whitesOnCell.length; i++)
+        Positioned(
+          top:
+              isTop
+                  ? cellIndex == 26 || cellIndex == 27
+                      ? (cellWidth * (i * 0.2))
+                      : i < 5
+                      ? cellWidth * (i * 0.55)
+                      : (cellWidth * (3 * 0.55)) + (cellWidth * (i * 0.15))
+                  : null,
+          bottom:
+              isTop
+                  ? null
+                  : cellIndex == 26 || cellIndex == 27
+                  ? (cellWidth * (i * 0.2))
+                  : i < 5
+                  ? cellWidth * (i * 0.55)
+                  : (cellWidth * (3 * 0.55)) + (cellWidth * (i * 0.15)),
+          child: PieceWidget(
+            // key: cellKeys['w$i'],
+            size: cellWidth,
+            piece: whitesOnCell[i],
+          ),
+        ),
+      for (int i = 0; i < blacksOnCell.length; i++)
+        Positioned(
+          top:
+              isTop
+                  ? cellIndex == 26 || cellIndex == 27
+                      ? (cellWidth * (i * 0.2))
+                      : i < 5
+                      ? cellWidth * (i * 0.55)
+                      : (cellWidth * (3 * 0.55)) + (cellWidth * (i * 0.15))
+                  : null,
+          bottom:
+              isTop
+                  ? null
+                  : cellIndex == 26 || cellIndex == 27
+                  ? (cellWidth * (i * 0.2))
+                  : i < 5
+                  ? cellWidth * (i * 0.55)
+                  : (cellWidth * (3 * 0.55)) + (cellWidth * (i * 0.15)),
+          child: PieceWidget(
+            // key: cellKeys['b$i'],
+            size: cellWidth,
+            piece: blacksOnCell[i],
+          ),
+        ),
+    ];
+  }
+
+  int calculateInitialPosition(int index, bool isWhite) {
+    if (!isWhite) {
+      switch (index) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+          return 5;
+        case 5:
+        case 6:
+        case 7:
+          return 7;
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+          return 12;
+        case 13:
+        case 14:
+          return 23;
+        default:
+          return 26;
+      }
+    } else {
+      switch (index) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+          return 18;
+        case 5:
+        case 6:
+        case 7:
+          return 16;
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+          return 11;
+        case 13:
+        case 14:
+          return 0;
+        default:
+          return 27;
+      }
+    }
+  }
+
+  int randomCell() => Random().nextInt(3);
+
+  void onDevPressed() {
+    //
+    setState(() {
+      for (int i = 0; i < whitePieces.length; i++) {
+        whitePieces[i].position = randomCell();
+      }
+      for (int i = 0; i < blackPieces.length; i++) {
+        blackPieces[i].position = randomCell() + 21;
+      }
+    });
+  }
+
+  void moveItem() {
+    var whitePiecesOnFromCell = whitePieces.where(
+      (piece) => piece.position == _fromValue,
+    );
+    var blackPiecesOnFromCell = blackPieces.where(
+      (piece) => piece.position == _fromValue,
+    );
+
+    if (whitePiecesOnFromCell.isNotEmpty) {
+      var piece = whitePiecesOnFromCell.first;
+      int index = whitePieces.indexOf(piece);
+      setState(() {
+        whitePieces[index].position = _toValue;
+        _fromValue = -1;
+        _toValue = -1;
+      });
+    } else if (blackPiecesOnFromCell.isNotEmpty) {
+      var piece = blackPiecesOnFromCell.first;
+      int index = blackPieces.indexOf(piece);
+      setState(() {
+        blackPieces[index].position = _toValue;
+        _fromValue = -1;
+        _toValue = -1;
+      });
+    }
   }
 }
