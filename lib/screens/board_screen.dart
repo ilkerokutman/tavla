@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:tavla/model/piece.dart';
-import 'package:tavla/triangle.dart';
 import 'package:tavla/utils/game_utils.dart';
 import 'package:tavla/widgets/cell_widget.dart';
 import 'package:tavla/widgets/piece_widget.dart';
+import 'package:tavla/widgets/dice_widget.dart';
+import 'dart:math';
 
 class BoardScreen extends StatefulWidget {
   const BoardScreen({super.key});
@@ -15,11 +18,15 @@ class BoardScreen extends StatefulWidget {
 class _BoardScreenState extends State<BoardScreen> {
   late List<Piece> whitePieces; // beyaz taslarin arrayi
   late List<Piece> blackPieces; // siyah taslarin arrayi
-
-  
+  Timer? _diceRollTimer;
 
   int fromIndex = -1; // nereden
   int toIndex = -1; // nereye
+  int diceA = 0;
+  int diceB = 0;
+  List<int> diceValuesToPlay = [];
+  bool isRolling = false;
+  double diceZoomCoefficient = 1;
 
   @override
   void initState() {
@@ -43,212 +50,292 @@ class _BoardScreenState extends State<BoardScreen> {
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;
                   final cellWidth = width / 16;
+                  final diceSize = cellWidth / 1.2;
                   // dinamik olarak genislik bilgisini `width` parametresine sagliyor
                   // cellWidth -> bir hucrenin genisligi
                   return Container(
                     color: Colors.brown.shade300,
-                    child: Row(
+                    child: Stack(
+                      fit: StackFit.expand,
                       children: [
-                        // MARK: sol taraf
-                        for (int i = 0; i < 6; i++)
-                          Container(
-                            color: Colors.brown.shade100,
-                            width: cellWidth,
-                            child: Stack(
-                              children: [
-                                // ust ucgen
-                                Positioned(
-                                  top: 0,
-                                  child: CellWidget(
-                                    cellIndex: 11 - i,
-                                    cellWidth: cellWidth,
-                                    isUp: true,
-                                    onTap: () {
-                                      // bir ucgene tiklandiginda
-                                      if (fromIndex >= 0) {
-                                        // birinci tik yapilmis ve belirlenmis
-                                        // ikinci tik yapilmamis
-                                        setState(() {
-                                          toIndex = 11 - i;
-                                        });
-                                        // tasi hareket ettir
-                                        movePiece();
-                                      } else {
-                                        // birinci tik yapilamis
-                                        setState(() {
-                                          fromIndex =
-                                              11 -
-                                              i; // tiklanan ucgen indexi ile guncelle
-                                          toIndex = -1; // sifirla
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-
-                                // ustteki taslar
-                                ...cellContent(
-                                  index: 11 - i,
-                                  cellWidth: cellWidth,
-                                ),
-                                // index text
-                                Positioned(top: 0, child: Text('${11 - i}')),
-
-                                // alt ucgen
-                                Positioned(
-                                  bottom: 0,
-                                  child: CellWidget(
-                                    cellIndex: 12 + i,
-                                    cellWidth: cellWidth,
-                                    isUp: false,
-                                    onTap: () {
-                                      if (fromIndex >= 0) {
-                                        // ikinci tik
-                                        setState(() {
-                                          toIndex = 12 + i;
-                                        });
-                                        movePiece();
-                                      } else {
-                                        // birinci tik
-                                        setState(() {
-                                          fromIndex = 12 + i;
-                                          toIndex = -1;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                                // alttaki taslar
-                                ...cellContent(
-                                  index: 12 + i,
-                                  cellWidth: cellWidth,
-                                ),
-                                // alttaki index text
-                                Positioned(bottom: 0, child: Text('${12 + i}')),
-                              ],
-                            ),
-                          ),
-                        // MARK: orta cubuk
-                        Container(
-                          width: cellWidth,
-                          color: Colors.brown.shade300,
-                          child: Stack(
-                            children: [
-                              ...cellContent(index: 24, cellWidth: cellWidth),
-                              Positioned(top: 0, child: Text('24')),
-
-                              ...cellContent(index: 25, cellWidth: cellWidth),
-                              Positioned(bottom: 0, child: Text('25')),
-                            ],
-                          ),
-                        ),
-                        // MARK: sag taraf
-                        for (int i = 0; i < 6; i++)
-                          Container(
-                            color: Colors.brown.shade100,
-                            width: cellWidth,
-                            child: Stack(
-                              children: [
-                                // sag ust ucgenler
-                                Positioned(
-                                  top: 0,
-                                  child: CellWidget(
-                                    cellIndex: 5 - i,
-                                    cellWidth: cellWidth,
-                                    isUp: true,
-                                    onTap: () {
-                                      if (fromIndex >= 0) {
-                                        // ikinci tik
-                                        setState(() {
-                                          toIndex = 5 - i;
-                                        });
-                                        movePiece();
-                                      } else {
-                                        // birinci tik
-                                        setState(() {
-                                          fromIndex = 5 - i;
-                                          toIndex = -1;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                                // sag ust taslar
-                                ...cellContent(
-                                  index: 5 - i,
-                                  cellWidth: cellWidth,
-                                ),
-                                // sag ust index text
-                                Positioned(top: 0, child: Text('${5 - i}')),
-                                // sag alt ucgen
-                                Positioned(
-                                  bottom: 0,
-                                  child: CellWidget(
-                                    cellIndex: 18 + i,
-                                    cellWidth: cellWidth,
-                                    isUp: false,
-                                    onTap: () {
-                                      if (fromIndex >= 0) {
-                                        // ikinci tik
-                                        setState(() {
-                                          toIndex = 18 + i;
-                                        });
-                                        movePiece();
-                                      } else {
-                                        // birinci tik
-                                        setState(() {
-                                          fromIndex = 18 + i;
-                                          toIndex = -1;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
-                                // sag alt taslar
-                                ...cellContent(
-                                  index: 18 + i,
-                                  cellWidth: cellWidth,
-                                ),
-                                // sag alt index text
-                                Positioned(bottom: 0, child: Text('${18 + i}')),
-                              ],
-                            ),
-                          ),
-                        // MARK: toplanan yer ve skor
-                        Container(
-                          width: cellWidth * 3,
-                          color: Colors.brown.shade300,
-                          child: Stack(
-                            children: [
-                              // ustte toplanan taslar
-                              ...cellContent(index: 26, cellWidth: cellWidth),
-                              // ust rakam
-                              Positioned(top: 0, child: Text('26')),
-                              // test butonlari
-                              Center(
-                                child: Wrap(
-                                  spacing: 4,
-                                  runSpacing: 4,
+                        Row(
+                          children: [
+                            // MARK: sol taraf
+                            for (int i = 0; i < 6; i++)
+                              Container(
+                                color: Colors.brown.shade100,
+                                width: cellWidth,
+                                child: Stack(
                                   children: [
-                                    ElevatedButton(
-                                      onPressed: resetPieces,
-                                      child: Text('basla'),
+                                    // ust ucgen
+                                    Positioned(
+                                      top: 0,
+                                      child: CellWidget(
+                                        cellIndex: 11 - i,
+                                        cellWidth: cellWidth,
+                                        isUp: true,
+                                        onTap: () {
+                                          // bir ucgene tiklandiginda
+                                          if (fromIndex >= 0) {
+                                            // birinci tik yapilmis ve belirlenmis
+                                            // ikinci tik yapilmamis
+                                            setState(() {
+                                              toIndex = 11 - i;
+                                            });
+                                            // tasi hareket ettir
+                                            movePiece();
+                                          } else {
+                                            // birinci tik yapilamis
+                                            setState(() {
+                                              fromIndex =
+                                                  11 -
+                                                  i; // tiklanan ucgen indexi ile guncelle
+                                              toIndex = -1; // sifirla
+                                            });
+                                          }
+                                        },
+                                      ),
                                     ),
-                                    ElevatedButton(
-                                      onPressed: bearOffPieces,
-                                      child: Text('topla'),
+
+                                    // ustteki taslar
+                                    ...cellContent(
+                                      index: 11 - i,
+                                      cellWidth: cellWidth,
                                     ),
-                                    Text('F: $fromIndex, T: $toIndex'),
+                                    // index text
+                                    Positioned(
+                                      top: 0,
+                                      child: Text('${11 - i}'),
+                                    ),
+
+                                    // alt ucgen
+                                    Positioned(
+                                      bottom: 0,
+                                      child: CellWidget(
+                                        cellIndex: 12 + i,
+                                        cellWidth: cellWidth,
+                                        isUp: false,
+                                        onTap: () {
+                                          if (fromIndex >= 0) {
+                                            // ikinci tik
+                                            setState(() {
+                                              toIndex = 12 + i;
+                                            });
+                                            movePiece();
+                                          } else {
+                                            // birinci tik
+                                            setState(() {
+                                              fromIndex = 12 + i;
+                                              toIndex = -1;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    // alttaki taslar
+                                    ...cellContent(
+                                      index: 12 + i,
+                                      cellWidth: cellWidth,
+                                    ),
+                                    // alttaki index text
+                                    Positioned(
+                                      bottom: 0,
+                                      child: Text('${12 + i}'),
+                                    ),
                                   ],
                                 ),
                               ),
-                              // altta toplanan taslar
-                              ...cellContent(index: 27, cellWidth: cellWidth),
-                              // alltaki rakam
-                              Positioned(bottom: 0, child: Text('27')),
-                            ],
+                            // MARK: orta cubuk
+                            Container(
+                              width: cellWidth,
+                              color: Colors.brown.shade300,
+                              child: Stack(
+                                children: [
+                                  ...cellContent(
+                                    index: 24,
+                                    cellWidth: cellWidth,
+                                  ),
+                                  Positioned(top: 0, child: Text('24')),
+
+                                  ...cellContent(
+                                    index: 25,
+                                    cellWidth: cellWidth,
+                                  ),
+                                  Positioned(bottom: 0, child: Text('25')),
+                                ],
+                              ),
+                            ),
+                            // MARK: sag taraf
+                            for (int i = 0; i < 6; i++)
+                              Container(
+                                color: Colors.brown.shade100,
+                                width: cellWidth,
+                                child: Stack(
+                                  children: [
+                                    // sag ust ucgenler
+                                    Positioned(
+                                      top: 0,
+                                      child: CellWidget(
+                                        cellIndex: 5 - i,
+                                        cellWidth: cellWidth,
+                                        isUp: true,
+                                        onTap: () {
+                                          if (fromIndex >= 0) {
+                                            // ikinci tik
+                                            setState(() {
+                                              toIndex = 5 - i;
+                                            });
+                                            movePiece();
+                                          } else {
+                                            // birinci tik
+                                            setState(() {
+                                              fromIndex = 5 - i;
+                                              toIndex = -1;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    // sag ust taslar
+                                    ...cellContent(
+                                      index: 5 - i,
+                                      cellWidth: cellWidth,
+                                    ),
+                                    // sag ust index text
+                                    Positioned(top: 0, child: Text('${5 - i}')),
+
+                                    // Sag zar yeri
+                                    // sag alt ucgen
+                                    Positioned(
+                                      bottom: 0,
+                                      child: CellWidget(
+                                        cellIndex: 18 + i,
+                                        cellWidth: cellWidth,
+                                        isUp: false,
+                                        onTap: () {
+                                          if (fromIndex >= 0) {
+                                            // ikinci tik
+                                            setState(() {
+                                              toIndex = 18 + i;
+                                            });
+                                            movePiece();
+                                          } else {
+                                            // birinci tik
+                                            setState(() {
+                                              fromIndex = 18 + i;
+                                              toIndex = -1;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    // sag alt taslar
+                                    ...cellContent(
+                                      index: 18 + i,
+                                      cellWidth: cellWidth,
+                                    ),
+                                    // sag alt index text
+                                    Positioned(
+                                      bottom: 0,
+                                      child: Text('${18 + i}'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            // MARK: toplanan yer ve skor
+                            Container(
+                              width: cellWidth * 3,
+                              color: Colors.brown.shade300,
+                              child: Stack(
+                                children: [
+                                  // ustte toplanan taslar
+                                  ...cellContent(
+                                    index: 26,
+                                    cellWidth: cellWidth,
+                                  ),
+                                  // ust rakam
+                                  Positioned(top: 0, child: Text('26')),
+                                  // test butonlari
+                                  Center(
+                                    child: Column(
+                                      spacing: 4,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ElevatedButton(
+                                          onPressed: resetPieces,
+                                          child: Text('basla'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: bearOffPieces,
+                                          child: Text('topla'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: onDiceTap,
+                                          child: Text('zar at'),
+                                        ),
+                                        Text('F: $fromIndex, T: $toIndex'),
+                                        Text('Dice: $diceA, $diceB'),
+                                        Text(
+                                          'MovesLeft: ${diceValuesToPlay.join(', ')}',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // altta toplanan taslar
+                                  ...cellContent(
+                                    index: 27,
+                                    cellWidth: cellWidth,
+                                  ),
+                                  // alltaki rakam
+                                  Positioned(bottom: 0, child: Text('27')),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        // MARK: zarlar
+                        Align(
+                          alignment: Alignment(0.288, 0),
+                          child: GestureDetector(
+                            onTap: onDiceTap,
+                            child: SizedBox(
+                              width: cellWidth * 2,
+                              height: cellWidth * 1.2,
+                              child: Stack(
+                                children: [
+                                  Align(
+                                    alignment: Alignment(-0.8, 0),
+                                    child: Transform.rotate(
+                                      angle: -15 * pi / 180,
+                                      child: DiceWidget(
+                                        value: diceA,
+                                        size: diceSize * diceZoomCoefficient,
+                                        isDisabled:
+                                            !diceValuesToPlay.contains(diceA),
+                                      ),
+                                    ),
+                                  ),
+                                  Align(
+                                    alignment: Alignment(0.8, -0.8),
+                                    child: Transform.rotate(
+                                      angle: 10 * pi / 180,
+                                      child: DiceWidget(
+                                        value: diceB,
+                                        size:
+                                            diceSize *
+                                            (diceZoomCoefficient *
+                                                (isRolling ? 0.9 : 1)),
+                                        isDisabled:
+                                            !diceValuesToPlay.contains(diceB),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
+                        // ... rest of the code remains the same ...
                       ],
                     ),
                   );
@@ -398,5 +485,49 @@ class _BoardScreenState extends State<BoardScreen> {
       toIndex = -1;
       setState(() {});
     }
+  }
+
+  // MARK: onDiceTap
+  void onDiceTap() {
+    // TODO: implement onDiceTap
+    _diceRollTimer?.cancel();
+    if (isRolling) return;
+    setState(() {
+      isRolling = true;
+    });
+    final random = Random();
+    int rollDuration = 750; // ms
+    int interval = 50; // ms
+    int elapsed = 0;
+    double maxZoomValue = 1.3;
+    int step = (rollDuration / interval).floor();
+    double zoomStep = (maxZoomValue - 1) / (step / 2);
+
+    _diceRollTimer = Timer.periodic(Duration(milliseconds: interval), (timer) {
+      setState(() {
+        diceA = random.nextInt(6) + 1;
+        diceB = random.nextInt(6) + 1;
+        if ((rollDuration / 2) > elapsed) {
+          //zoom in
+          diceZoomCoefficient += zoomStep;
+        } else {
+          // zoom out
+          diceZoomCoefficient -= zoomStep;
+        }
+        diceZoomCoefficient = diceZoomCoefficient.clamp(1, maxZoomValue);
+      });
+      elapsed += interval;
+      if (elapsed >= rollDuration) {
+        timer.cancel();
+        setState(() {
+          diceA = random.nextInt(6) + 1;
+          diceB = random.nextInt(6) + 1;
+          diceValuesToPlay =
+              diceA == diceB ? List.generate(4, (e) => diceA) : [diceA, diceB];
+          isRolling = false;
+          diceZoomCoefficient = 1;
+        });
+      }
+    });
   }
 }
