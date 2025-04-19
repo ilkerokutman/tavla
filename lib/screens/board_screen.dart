@@ -494,6 +494,7 @@ class _BoardScreenState extends State<BoardScreen> {
     if (isRolling) return;
     setState(() {
       isRolling = true;
+      diceValuesToPlay.clear();
     });
     final random = Random();
     int rollDuration = 750; // ms
